@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <time.h>
 #include <fstream>
+#include <string.h>
+#include <stdlib.h>
 using namespace std;
 int width = 0;		  //Kích thước cột
 int height = 0;		  //Kích thước hàng
@@ -25,66 +27,84 @@ vector<vector<char>> generateDisplayBoard();
 /*
 Hàm generateDisplayBoard - Khởi tạo ma trận chứa các ký tự '*'. Thể hiện giao diện game.
 */
-void executing(vector<vector<char>> &board, vector<vector<char>> &displayBoard, int x, int y);
+void spread(vector<vector<char>> &board, vector<vector<char>> &displayBoard, int x, int y);
 /*
-Hàm executing - Hàm chính của chương trình. Sử dụng đệ quy để mở các ô không có mìn xung quanh ô tại vị trí x, y.
+Hàm spread - Hàm chính của chương trình. Sử dụng đệ quy để mở các ô không có mìn xung quanh ô tại vị trí x, y.
 */
-void printBoard(vector<vector<char>> &displayboard);
+void draw(vector<vector<char>> displayboard);
 /*
 Hàm hiển thị giao diện game. Nhận dữ liệu từ displayboard.
 */
+void printEnding(vector<vector<char>> displayboard); //In ra mình hình vị trí mìn khi kết thúc game
+/*
+Hàm run để chuẩn hóa dữ liệu vào và tiên hành chơi.
+*/
+void run(vector<vector<char>> &board, vector<vector<char>> &displayboard, int x, int y, char input);
 int main()
 {
 	initialization();
 	vector<vector<char>> board = generateBoard();				//Mảng chứa dữ liệu ban đầu. Số lượng min của mỗi ô.
 	vector<vector<char>> displayBoard = generateDisplayBoard(); //Mảng chứa dữ liệu để hiển thị thông tin cho người chơi.
-	string input;
-	int x = -1, y = -1;
+	char input;
+	int x, y;
+	run(board, displayBoard, x, y, input);
+	board.clear(); // Xoa vector
+	displayBoard.clear();
+	return 0;
+}
+void run(vector<vector<char>> &board, vector<vector<char>> &displayBoard, int x, int y, char input)
+{
+	char s1 = 'f';
+	char s2 = 'o';
 	while (1)
 	{
-		printBoard(displayBoard);
-		cout << endl
-			 << endl
-			 << "1.Option:\n\t'o'-Open\n\t'f' -Flag\nYour choice: ";
-		cin >> input;
-		cin.clear();
-		cout << "2.Enter x: ";
-		cin >> x;
-		cout << "3.Enter y: ";
-		cin >> y;
-		//Chuẩn hóa dữ liệu vào
-		if (input != "f" && input != "o")
+		draw(displayBoard);
+		input = 'n';
+		x = -1;
+		y = -1;
+		while (!(input == s1) && !(input == s2))
 		{
-			cout << "Enter again" << endl;
-			continue;
+			cout << endl
+				 << endl
+				 << "1.Option:\n\t'o'-Open\n\t'f' -Flag/Un Flag\nYour choice: ";
+			cin >> input;
 		}
-		if (x < 0 || x >= height || y < 0 || y >= width)
+		while (!(x >= 0 && x < height))
 		{
-			cout << "Enter again" << endl
-				 << endl;
-			continue;
+
+			cout << "\n2.Enter x: ";
+			cin >> x;
+		}
+		while (y < 0 || y >= width)
+		{
+
+			cout << "\n3.Enter y: ";
+			cin >> y;
 		}
 
 		//Tiến hành chơi với các lựa chọn
-		if (input == "f")
+		if (input == 'f')
 		{
 			if (displayBoard[x][y] == '*')
 			{
 				displayBoard[x][y] = 'F';
 			}
+			else if (displayBoard[x][y] == 'F')
+			{
+				displayBoard[x][y] = '*';
+			}
 			else
 				cout << "Can't flag" << endl
 					 << endl;
 		}
-
 		else
 		{
 			if (board[x][y] == 'M')
 			{
-			    printBoard(board);
-				cout << "You hit a mine. Bummer." << endl;
+				printEnding(board);
+				cout << endl
+					 << "You hit a mine." << endl;
 				break;
-
 			}
 
 			else if (board[x][y] != '0')
@@ -94,17 +114,18 @@ int main()
 
 			else
 			{
-				executing(board, displayBoard, x, y);
+				spread(board, displayBoard, x, y);
 			}
 		}
 		if (isWin(board, displayBoard))
-		{   printBoard(board);
-			cout <<endl<< "You win!" << endl;
+		{
+			printEnding(board);
+			cout << endl
+				 << "You win!" << endl;
 			break;
 		}
 	}
 }
-
 void initialization()
 {
 	fstream f;
@@ -136,14 +157,12 @@ vector<vector<char>> generateBoard()
 	{
 		row.push_back('0');
 	}
-
 	for (int j = 0; j < height; j++)
 	{
 		board.push_back(row);
 	}
 	//Sinh vị trí mìn ngẫu nhiên. Với số lượng mìn cho trước.
 	srand(time(0));
-
 	while (mines_placed < numberOfMine)
 	{
 		x = rand() % height;
@@ -181,13 +200,11 @@ vector<vector<char>> generateBoard()
 				}
 			}
 
-			board[i][j] = (char)mines_adjacent + 48; // chuyển kiêu int thành ký tự char.
+			board[i][j] = (char)mines_adjacent + 48; // kiêu int thành ký tự char. ví dụ 1 -> '1'
 		}
 	}
-
 	return board;
 }
-
 vector<vector<char>> generateDisplayBoard()
 {
 	vector<vector<char>> displayBoard;
@@ -202,32 +219,7 @@ vector<vector<char>> generateDisplayBoard()
 	}
 	return displayBoard;
 }
-
-void executing(vector<vector<char>> &board, vector<vector<char>> &displayBoard, int x, int y)
-{
-
-	if (displayBoard[x][y] == '*'&&board[x][y]!='M') //Trường hợp ô đang xét là ô chưa mở. Nếu đã mở thì bỏ qua.
-	{
-
-		displayBoard[x][y] = board[x][y]; // đặt giá trị của displayboard bằng với board tại vị trí x, y. kiểm tra xem nó có phải là ô trống hay không?
-		if (board[x][y] == '0')
-		{
-			/* để loang các ô liền kề
-		*/
-			for (int u = x - 1; u <= x + 1; ++u)
-			{
-				for (int v = y - 1; v <= y + 1; ++v)
-				{
-					if (u < 0 || v < 0 || u >= height || v >= width)
-						continue;
-					executing(board, displayBoard, u, v);
-				}
-			}
-		}
-	}
-}
-
-void printBoard(vector<vector<char>> &displayboard)
+void draw(vector<vector<char>> displayboard)
 {
 	system("cls"); //làm mới màn hình
 	cout << "WELLCOME TO MY MINESWEEPER" << endl;
@@ -241,18 +233,19 @@ void printBoard(vector<vector<char>> &displayboard)
 	{
 		cout << "-";
 	}
-
 	for (int i = 0; i < height; i++)
 	{
 		cout << endl;
 		printf("%2d%2c", i, '|');
 		for (int j = 0; j < width; j++)
-        if(displayboard[i][j]=='0'){
-            printf("%2c%2c", ' ', '|');
-        }
-		else{
-			printf("%2c%2c", displayboard[i][j], '|');
-		}
+			if (displayboard[i][j] == '0')
+			{
+				printf("%2c%2c", ' ', '|');
+			}
+			else
+			{
+				printf("%2c%2c", displayboard[i][j], '|');
+			}
 		cout << endl;
 		for (int i = 0; i <= height * 4 + 3; i++)
 		{
@@ -260,11 +253,73 @@ void printBoard(vector<vector<char>> &displayboard)
 		}
 	}
 }
+void printEnding(vector<vector<char>> displayboard)
+{
+	system("cls"); //làm mới màn hình
+	cout << "WELLCOME TO MY MINESWEEPER" << endl;
+	printf("x\\y%c", '|');
+	for (int i = 0; i < height; i++)
+	{
+		printf("%2d%2c", i, '|');
+	}
+	cout << endl;
+	for (int i = 0; i <= height * 4 + 3; i++)
+	{
+		cout << "-";
+	}
+	for (int i = 0; i < height; i++)
+	{
+		cout << endl;
+		printf("%2d%2c", i, '|');
+		for (int j = 0; j < width; j++)
+			if (displayboard[i][j] != 'M')
+			{
+				printf("%2c%2c", ' ', '|');
+			}
+			else
+			{
+				printf("%2c%2c", displayboard[i][j], '|');
+			}
+		cout << endl;
+		for (int i = 0; i <= height * 4 + 3; i++)
+		{
+			cout << "-";
+		}
+	}
+}
+/*
+    hàm spread: Mở các ô liền kề.
+    Sử dụng đệ quy và thuật toán tìm kiếm theo chiều sâu.
+    Mô tả: Kiểm tra vị trí x, y đã được mở chưa? có mìn không?
+    Nếu chưa mở và không có mìn. Ô đấy sẽ được thể hiện ra.
+       Trong trường hợp ô đó là ô '0' - KHông có mìn thì tiến hành kiểm tra các ô xung quanh nó
+*/
+void spread(vector<vector<char>> &board, vector<vector<char>> &displayBoard, int x, int y)
+{
+	if (displayBoard[x][y] == '*' && board[x][y] != 'M') //Trường hợp ô đang xét là ô chưa mở. Nếu đã mở thì bỏ qua.
+	{
+		displayBoard[x][y] = board[x][y]; // đặt giá trị của displayboard bằng với board tại vị trí x, y. kiểm tra xem nó có phải là ô trống hay không?
+		if (board[x][y] == '0')
+		{
+			/* để loang các ô liền kề
+		*/
+			for (int u = x - 1; u <= x + 1; ++u)
+			{
+				for (int v = y - 1; v <= y + 1; ++v)
+				{
+					if (u < 0 || v < 0 || u >= height || v >= width) //Loại trừ các vị trí x, y không phù hợp
+						continue;
+					spread(board, displayBoard, u, v);
+				}
+			}
+		}
+	}
+}
 
 bool isWin(vector<vector<char>> board, vector<vector<char>> display)
 {
-	int c1 = 0;
-	int c2 = 0;
+	int c1 = 0;//Điều kiện 1
+	int c2 = 0;//Điều kiện 2
 	for (int i = 0; i < height; i++)
 	{
 		for (int j = 0; j < width; j++)
